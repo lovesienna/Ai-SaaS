@@ -2,7 +2,7 @@
 
 import axios from "axios";
 import * as z from "zod";
-import { MessageSquare } from "lucide-react";
+import { MessageSquare, User } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
@@ -14,8 +14,12 @@ import { Form, FormControl, FormField, FormItem } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Empty } from "@/components/ui/empty";
+import { Loader } from "@/components/loader";
 
 import { formSchema } from "./constants";
+import { cn } from "@/lib/utils";
+import { UserAvatar } from "@/components/user-avatar";
+import { BotAvatar } from "@/components/bot-avatar";
 
 //useForm은 React Hook Form 라이브러리의 핵심 함수로, 폼의 상태와 제어 기능을 관리하는데 사용됩니다.
 const ConversationPage = () => {
@@ -32,33 +36,39 @@ const ConversationPage = () => {
     },
   });
 
-  const isLoading = form.formState.isSubmitting;
+  const isLoading = form.formState.isSubmitting; // 폼 제출이 진행 중인지 여부를 isLoading 변수로 저장합니다.
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    // 폼 제출 이벤트 핸들러를 정의합니다.
     try {
+      // 새로운 채팅 메시지를 생성합니다.
       const userMessage: ChatCompletionRequestMessage = {
         role: "user",
         content: values.prompt,
       };
+      // 이전 메시지와 새로운 채팅 메시지를 합칩니다.
       const newMessages = [...messages, userMessage];
 
+      // 챗봇 API에 새로운 메시지를 전송하고 응답을 받아옵니다.
       const response = await axios.post("/api/conversation", {
         messages: newMessages,
       });
 
+      // 응답으로 받은 메시지를 기존 메시지와 함께 상태에 추가합니다.
       setMessages((current) => [...current, userMessage, response.data]);
 
-      form.reset();
+      form.reset(); // 폼을 초기화합니다.
     } catch (error: any) {
-      //TODO : open pro modal
+      // 오류가 발생한 경우 에러 로그를 출력합니다.
       console.log(error);
     } finally {
-      router.refresh();
+      router.refresh(); // 페이지를 새로 고칩니다.
     }
   };
 
   return (
     <div>
+      {/* 채팅 페이지의 제목과 설명을 나타내는 Heading 컴포넌트입니다. */}
       <Heading
         title="Conversation"
         description="Our most advanced conversation model."
@@ -70,28 +80,29 @@ const ConversationPage = () => {
         <div>
           <Form {...form}>
             <form
-              onSubmit={form.handleSubmit(onSubmit)}
+              onSubmit={form.handleSubmit(onSubmit)} // 폼 제출 이벤트 핸들러를 폼에 연결합니다.
               className="
-                    rounded-lg
-                    border
-                    w-full
-                    p-4
-                    px-3
-                    md:px-6
-                    focus-within:shadow-sm
-                    grid
-                    grid-cols-12
-                    gap-2
-                    "
+                rounded-lg
+                border
+                w-full
+                p-4
+                px-3
+                md:px-6
+                focus-within:shadow-sm
+                grid
+                grid-cols-12
+                gap-2
+                "
             >
               <FormField
                 name="prompt"
                 render={({ field }) => (
                   <FormItem className="col-span-12 lg:col-span-10">
                     <FormControl className="m-0 p-0">
+                      {/* 사용자가 입력하는 입력 필드입니다. */}
                       <Input
                         className="border-0 outline-none focus-visible:ring-0 focus-visible:ring-transparent"
-                        disabled={isLoading}
+                        disabled={isLoading} // 로딩 중인 경우 입력 필드를 비활성화합니다.
                         placeholder="How do I calculate the radius of a circle?"
                         {...field}
                       />
@@ -99,10 +110,11 @@ const ConversationPage = () => {
                   </FormItem>
                 )}
               />
+              {/* 챗봇 메시지를 생성하는 버튼입니다. */}
               <Button
                 className="col-span-12 lg:col-span-2 w-full"
                 type="submit"
-                disabled={isLoading}
+                disabled={isLoading} // 로딩 중인 경우 버튼을 비활성화합니다.
                 size="icon"
               >
                 Generate
@@ -111,12 +123,31 @@ const ConversationPage = () => {
           </Form>
         </div>
         <div className="space-y-4 mt-4">
+          {isLoading && (
+            // 로딩 중인 경우 로딩 스피너를 표시합니다.
+            <div className="p-8 rounded-lg w-full flex items-center justify-center bg-muted">
+              <Loader />
+            </div>
+          )}
           {messages.length === 0 && !isLoading && (
+            // 메시지가 없는 경우 "No conversation started." 메시지를 표시합니다.
             <Empty label="No conversation started." />
           )}
           <div className="flex flex-col-reverse gap-y-4">
             {messages.map((message) => (
-              <div key={message.content}>{message.content}</div>
+              // 채팅 메시지를 표시하는 반복문입니다.
+              <div
+                key={message.content}
+                className={cn(
+                  "p-8 w-full flex items-start gap-x-8 rounded-lg",
+                  message.role === "user"
+                    ? "bg-white border border-black/10"
+                    : "bg-muted"
+                )}
+              >
+                {message.role === "user" ? <UserAvatar /> : <BotAvatar />}
+                <p className="text-sm">{message.content}</p>
+              </div>
             ))}
           </div>
         </div>
