@@ -4,6 +4,6 @@ import * as z from "zod";
 export const formSchema = z.object({
   prompt: z.string().min(1, {
     //문자열이어야하고 최소 1글자 이상이어야함
-    message: "Music Prompt is required",
+    message: "Video Prompt is required",
   }),
 });
